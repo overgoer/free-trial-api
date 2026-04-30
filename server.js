@@ -23,7 +23,27 @@ app.get("/ping", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), ...upsell });
 });
 
-app.post("/free/api/users", validateFreeApiKey, rateLimitFree, async (req, res) => {
+// POST /free/api/keys — generate a new free trial API key (no auth required)
+app.post("/free/api/keys", async (req, res) => {
+  try {
+    const key = generateApiKey();
+    const result = await pool.query(
+      "INSERT INTO free_api_keys (key, expires_at) VALUES ($1, NOW() + INTERVAL '24 hours') RETURNING key, created_at, expires_at",
+      [key]
+    );
+    const row = result.rows[0];
+    res.status(201).json({
+      key: row.key,
+      expires_at: row.expires_at,
+      ...upsell
+    });
+  } catch (err) {
+    console.error("POST /free/api/keys error:", err.message);
+    res.status(500).json({ error: "Internal server error", ...upsell });
+  }
+});
+
+app.post("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, res) => {
   try {
     const { name, age } = req.body;
 
@@ -51,7 +71,7 @@ app.post("/free/api/users", validateFreeApiKey, rateLimitFree, async (req, res) 
   }
 });
 
-app.get("/free/api/users", validateFreeApiKey, rateLimitFree, async (req, res) => {
+app.get("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, res) => {
   try {
     const { sort, limit, status } = req.query;
 

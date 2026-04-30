@@ -7,7 +7,7 @@ function rateLimitFree(req, res, next) {
   if (!apiKey) {
     return res.status(401).json({
       error: "Missing API key",
-      _upsell: "Find bugs? Full version has 20 \xe2\x86\x92 https://t.me/api_practicum_bot"
+      _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
     });
   }
 
@@ -31,7 +31,7 @@ function rateLimitFree(req, res, next) {
     return res.status(429).json({
       error: "Rate limit exceeded",
       retry_after: 60,
-      _upsell: "Find bugs? Full version has 20 \xe2\x86\x92 https://t.me/api_practicum_bot"
+      _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
     });
   }
 
@@ -43,15 +43,46 @@ function generateApiKey() {
   return "free-trial-" + short;
 }
 
-function validateFreeApiKey(req, res, next) {
-  const key = req.headers["x-fix-bug"];
-  if (!key || key.trim() === "") {
-    return res.status(401).json({
-      error: "Missing or empty API key",
-      _upsell: "Find bugs? Full version has 20 \xe2\x86\x92 https://t.me/api_practicum_bot"
-    });
-  }
-  next();
+function validateFreeApiKey(pool) {
+  return async function (req, res, next) {
+    const key = req.headers["x-fix-bug"];
+    if (!key || key.trim() === "") {
+      return res.status(401).json({
+        error: "Missing or empty API key",
+        _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        "SELECT key, created_at, expires_at FROM free_api_keys WHERE key = $1",
+        [key]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(401).json({
+          error: "Invalid API key",
+          _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+        });
+      }
+
+      const row = result.rows[0];
+      if (new Date(row.expires_at) < new Date()) {
+        return res.status(403).json({
+          error: "Free trial expired",
+          _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+        });
+      }
+
+      next();
+    } catch (err) {
+      console.error("validateFreeApiKey error:", err.message);
+      return res.status(500).json({
+        error: "Internal server error",
+        _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+      });
+    }
+  };
 }
 
 module.exports = { rateLimitFree, generateApiKey, validateFreeApiKey };
