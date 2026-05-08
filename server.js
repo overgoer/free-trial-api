@@ -107,6 +107,24 @@ app.get("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, 
   }
 });
 
+
+// Balance Lab — host header echo (basic version)
+app.all("/balance-lab", (req, res) => {
+  const { headers, method, ip } = req;
+  res.json({
+    service: "free-trial-api",
+    your_host: headers.host || "(none)",
+    your_method: method,
+    your_ip: ip,
+    x_forwarded_host: headers["x-forwarded-host"] || "(none)",
+    x_forwarded_for: headers["x-forwarded-for"] || "(none)",
+    x_real_ip: headers["x-real-ip"] || "(none)",
+    all_request_headers: headers,
+    hint: "Try changing the Host header and see what changes",
+    ...upsell,
+  });
+});
+
 app.listen(PORT, () => {
   console.log("Free Trial API running on port " + PORT);
 });
