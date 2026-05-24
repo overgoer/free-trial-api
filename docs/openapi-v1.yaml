@@ -1,6 +1,6 @@
 openapi: "3.0.3"
 info:
-  title: "Free Trial API — V1"
+  title: "eddytester API — V1"
   version: "1.0.0"
   description: |
     Free Trial API for testers. Manage users with a simple CRUD interface.

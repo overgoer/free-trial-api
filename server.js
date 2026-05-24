@@ -22,7 +22,7 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-const UPSELL = { _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot" };
+const UPSELL = { _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practicum_bot" };
 
 // ─── Helpers ─────────────────────────────────────────────
 function computeStatus(age) {
@@ -358,17 +358,17 @@ const specV2 = yaml.load(fs.readFileSync(path.join(__dirname, "docs/openapi-v2.y
 
 const swaggerOptions = {
   customCss: swaggerCss,
-  customSiteTitle: "Free Trial API — V1",
+  customSiteTitle: "eddytester API — V1",
 };
 
 app.use("/docs/v1", swaggerUi.serveFiles(specV1, swaggerOptions), swaggerUi.setup(specV1, swaggerOptions));
 
 app.use("/docs/v2", swaggerUi.serveFiles(specV2, {
   ...swaggerOptions,
-  customSiteTitle: "Free Trial API — V2",
+  customSiteTitle: "eddytester API — V2",
 }), swaggerUi.setup(specV2, {
   ...swaggerOptions,
-  customSiteTitle: "Free Trial API — V2",
+  customSiteTitle: "eddytester API — V2",
 }));
 
 // ===================================================================
@@ -401,7 +401,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log("Free Trial API v1+v2 running on port " + PORT);
+  console.log("eddytester API v1+v2 running on port " + PORT);
   console.log("  V1 (buggy):  /free/v1/api/");
   console.log("  V2 (fixed):  /free/v2/api/");
   console.log("  Swagger V1:  http://85.193.81.51:" + PORT + "/docs/v1");

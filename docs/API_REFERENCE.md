@@ -1,4 +1,4 @@
-# Free Trial API — Testing Reference
+# eddytester API — Testing Reference
 
 **Base URL:** `http://85.193.81.51:3001`
 **API prefix:** `/free/v1/api/`
