@@ -1,6 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
+const path = require("path");
+const fs = require("fs");
+const yaml = require("js-yaml");
+const swaggerUi = require("swagger-ui-express");
+const { SwaggerTheme, SwaggerThemeNameEnum } = require("swagger-themes");
 const { rateLimitFree, generateApiKey, validateFreeApiKey } = require("./middleware");
 
 const app = express();
@@ -342,6 +347,31 @@ app.delete("/free/v2/api/users/:id", validateFreeApiKey(pool), async (req, res) 
 });
 
 // ===================================================================
+//  SWAGGER UI
+// ===================================================================
+
+const theme = new SwaggerTheme();
+const swaggerCss = theme.getBuffer(SwaggerThemeNameEnum.DRACULA);
+
+const specV1 = yaml.load(fs.readFileSync(path.join(__dirname, "docs/openapi-v1.yaml"), "utf8"));
+const specV2 = yaml.load(fs.readFileSync(path.join(__dirname, "docs/openapi-v2.yaml"), "utf8"));
+
+const swaggerOptions = {
+  customCss: swaggerCss,
+  customSiteTitle: "Free Trial API — V1",
+};
+
+app.use("/docs/v1", swaggerUi.serveFiles(specV1, swaggerOptions), swaggerUi.setup(specV1, swaggerOptions));
+
+app.use("/docs/v2", swaggerUi.serveFiles(specV2, {
+  ...swaggerOptions,
+  customSiteTitle: "Free Trial API — V2",
+}), swaggerUi.setup(specV2, {
+  ...swaggerOptions,
+  customSiteTitle: "Free Trial API — V2",
+}));
+
+// ===================================================================
 //  NON-API ENDPOINTS
 // ===================================================================
 
@@ -374,4 +404,6 @@ app.listen(PORT, () => {
   console.log("Free Trial API v1+v2 running on port " + PORT);
   console.log("  V1 (buggy):  /free/v1/api/");
   console.log("  V2 (fixed):  /free/v2/api/");
+  console.log("  Swagger V1:  http://85.193.81.51:" + PORT + "/docs/v1");
+  console.log("  Swagger V2:  http://85.193.81.51:" + PORT + "/docs/v2");
 });
