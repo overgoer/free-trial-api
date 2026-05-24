@@ -3,36 +3,13 @@ info:
   title: "Free Trial API — V2"
   version: "1.0.0"
   description: |
-    Free Trial API for testers. Get started by creating an API key, then use it to manage users.
+    Free Trial API for testers. Manage users with a simple CRUD interface.
 
     **Base URL:** `http://85.193.81.51:3001`
 servers:
   - url: "http://85.193.81.51:3001"
     description: "Production"
 paths:
-  /free/v2/api/keys:
-    post:
-      summary: "Create API key"
-      description: "Creates a new API key valid for 24 hours."
-      operationId: "createApiKeyV2"
-      tags: ["Keys"]
-      responses:
-        "201":
-          description: "API key created"
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [key, expires_at]
-                properties:
-                  key:
-                    type: string
-                    example: "free-trial-1a2b3c4d"
-                  expires_at:
-                    type: string
-                    format: "date-time"
-                    example: "2026-05-25T12:00:00.000Z"
-
   /free/v2/api/users:
     post:
       summary: "Create user"
