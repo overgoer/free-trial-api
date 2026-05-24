@@ -3,6 +3,7 @@ const cors = require("cors");
 const { Pool } = require("pg");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const yaml = require("js-yaml");
 const swaggerUi = require("swagger-ui-express");
 const { SwaggerTheme, SwaggerThemeNameEnum } = require("swagger-themes");
@@ -21,6 +22,24 @@ const pool = new Pool({
 
 app.use(cors());
 app.use(express.json());
+
+// ─── Stats logger ──────────────────────────────────────────
+
+const PERMANENT_KEY = "free-trial-permanent-33be59f62f921640941ed5e6296940f7426f68477e6e4632";
+
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    const p = req.path;
+    if (p.startsWith("/stats") || p.startsWith("/docs") || p === "/ping" || p === "/balance-lab") return;
+    const key = req.headers["x-fix-bug"] || "";
+    const hash = key ? crypto.createHash("md5").update(key).digest("hex").substring(0, 8) : null;
+    pool.query(
+      "INSERT INTO request_logs (endpoint, method, status_code, api_key_hash) VALUES ($1, $2, $3, $4)",
+      [p, req.method, res.statusCode, hash]
+    ).catch(() => {});
+  });
+  next();
+});
 
 const UPSELL = { _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot" };
 
@@ -392,6 +411,48 @@ app.all("/balance-lab", (req, res) => {
     hint: "Try changing the Host header and see what changes",
     ...UPSELL,
   });
+});
+
+// ── GET /stats ─────────────────────────────────────────────
+app.get("/stats", async (req, res) => {
+  try {
+    const key = req.headers["x-fix-bug"];
+    if (key !== PERMANENT_KEY) return res.status(403).json({ error: "Access denied" });
+
+    const [totalReq, todayReq, totalKeys, activeKeys, totalUsers, byEndpoint, hourly, statusBreak] =
+      await Promise.all([
+        pool.query("SELECT COUNT(*)::int FROM request_logs"),
+        pool.query("SELECT COUNT(*)::int FROM request_logs WHERE created_at >= CURRENT_DATE"),
+        pool.query("SELECT COUNT(*)::int FROM free_api_keys"),
+        pool.query("SELECT COUNT(*)::int FROM free_api_keys WHERE expires_at > NOW()"),
+        pool.query("SELECT COUNT(*)::int FROM free_users"),
+        pool.query("SELECT CONCAT(method, ' ', endpoint) AS route, COUNT(*)::int AS count FROM request_logs GROUP BY route ORDER BY count DESC LIMIT 10"),
+        pool.query("SELECT date_trunc('hour', created_at) AS hour, COUNT(*)::int AS count FROM request_logs WHERE created_at > NOW() - INTERVAL '24 hours' GROUP BY hour ORDER BY hour"),
+        pool.query("SELECT CASE WHEN status_code >= 500 THEN '5xx' WHEN status_code >= 400 THEN '4xx' ELSE '2xx' END AS status_group, COUNT(*)::int AS count FROM request_logs GROUP BY status_group ORDER BY status_group"),
+      ]);
+
+    // Auto-cleanup every 10th request
+    if ((totalReq.rows[0].count % 10) < 1) {
+      pool.query("DELETE FROM request_logs WHERE created_at < NOW() - INTERVAL '30 days'").catch(() => {});
+    }
+
+    res.json({
+      summary: {
+        total_requests: totalReq.rows[0].count,
+        today_requests: todayReq.rows[0].count,
+        total_api_keys: totalKeys.rows[0].count,
+        active_keys: activeKeys.rows[0].count,
+        total_users: totalUsers.rows[0].count,
+      },
+      by_endpoint: byEndpoint.rows,
+      hourly_last_24h: hourly.rows,
+      status_breakdown: statusBreak.rows,
+      _message: "eddytester API · Dashboard data",
+    });
+  } catch (err) {
+    console.error("/stats error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // ─── Global error handler ────────────────────────────────
