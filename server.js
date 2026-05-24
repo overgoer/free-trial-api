@@ -22,7 +22,7 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-const UPSELL = { _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practicum_bot" };
+const UPSELL = { _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot" };
 
 // ─── Helpers ─────────────────────────────────────────────
 function computeStatus(age) {

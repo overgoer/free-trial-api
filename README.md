@@ -57,7 +57,7 @@ curl -s http://localhost:3001/ping | jq
 {
   "status": "ok",
   "timestamp": "2026-05-13T10:00:00.000Z",
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 

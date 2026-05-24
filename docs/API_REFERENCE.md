@@ -36,7 +36,7 @@ POST /free/v1/api/keys
 {
   "key": "free-trial-1a2b3c4d",
   "expires_at": "2026-05-25T12:00:00.000Z",
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
@@ -79,7 +79,7 @@ POST /free/v1/api/users
     "age": 25,
     "created_at": "2026-05-24T12:00:00.000Z"
   },
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
@@ -119,7 +119,7 @@ GET /free/v1/api/users
       "created_at": "2026-05-24T12:00:00.000Z"
     }
   ],
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
@@ -158,7 +158,7 @@ GET /free/v1/api/users/:id
     "name": "Alice",
     "age": 25
   },
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
@@ -208,7 +208,7 @@ Both fields are optional — only provided fields are updated.
     "name": "Alice Updated",
     "age": 30
   },
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
@@ -241,7 +241,7 @@ DELETE /free/v1/api/users/:id
 {
   "message": "Deleted 1 user",
   "user": "Alice",
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
@@ -266,7 +266,7 @@ GET /ping
   "status": "ok",
   "timestamp": "2026-05-24T12:00:00.000Z",
   "version": "v1+v2",
-  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
+  "_upsell": "Find bugs? Full version has 20 → https://t.me/api_practikum_bot"
 }
 ```
 
