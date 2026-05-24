@@ -1,0 +1,61 @@
+---
+title: "Home"
+subtitle: "eddytester · Infrastructure"
+logo: "assets/icons/homer.png"
+header: true
+footer: '<p>Created with <a href="https://github.com/bastienwirtz/homer">Homer</a> · <a href="https://github.com/overgoer/free-trial-api">eddytester API on GitHub</a></p>'
+theme: default
+columns: "3"
+
+services:
+  - name: "eddytester API"
+    icon: "fas fa-code"
+    items:
+      - name: "Ping"
+        logo: "fas fa-heartbeat"
+        subtitle: "Health check"
+        url: "http://85.193.81.51:3001/ping"
+        target: "_blank"
+      - name: "Swagger V1"
+        logo: "fas fa-flask"
+        subtitle: "API docs — buggy version"
+        url: "http://85.193.81.51:3001/docs/v1"
+        target: "_blank"
+      - name: "Swagger V2"
+        logo: "fas fa-check-circle"
+        subtitle: "API docs — reference"
+        url: "http://85.193.81.51:3001/docs/v2"
+        target: "_blank"
+      - name: "Stats"
+        logo: "fas fa-chart-bar"
+        subtitle: "Usage statistics (JSON)"
+        url: "http://85.193.81.51:3001/stats"
+        target: "_blank"
+
+  - name: "Monitoring"
+    icon: "fas fa-eye"
+    items:
+      - name: "Dashboard"
+        logo: "fas fa-chart-line"
+        subtitle: "Live graphs & metrics"
+        url: "http://77.73.135.110:8082/"
+        target: "_blank"
+      - name: "VPN Monitor"
+        logo: "fas fa-shield-alt"
+        subtitle: "Server status"
+        url: "http://77.73.135.110:8081/"
+        target: "_blank"
+
+  - name: "Links"
+    icon: "fas fa-link"
+    items:
+      - name: "GitHub"
+        logo: "fab fa-github"
+        subtitle: "free-trial-api repository"
+        url: "https://github.com/overgoer/free-trial-api"
+        target: "_blank"
+      - name: "Postman"
+        logo: "fas fa-paper-plane"
+        subtitle: "API collection (desktop)"
+        url: "https://www.postman.com/"
+        target: "_blank"

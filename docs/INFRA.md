@@ -23,8 +23,9 @@
 | IP | `77.73.135.110` |
 | SSH | `ssh root@77.73.135.110` |
 | OS | Ubuntu 22.04 |
-| Nginx | Порт 8081 (VPN Monitor), 8082 (Dashboard), 8888 (Telegram proxy — Python) |
+| Nginx | Порт 8081 (VPN Monitor), 8082 (Dashboard), 8083 (Homer — внутр.), 8084 (Homer — внешн.), 8888 (Telegram proxy — Python) |
 | PM2 | alvin-bot, api-practicum-bot, bsa-tg, fitmister, portmonet, amsterdeep-bot |
+| Docker | Homer (`b4bz/homer:latest`) на порту 8083 |
 
 ---
 
@@ -37,6 +38,7 @@
 | http://85.193.81.51:3001/docs/v1 | Swagger UI — V1 (бажная версия) |
 | http://85.193.81.51:3001/docs/v2 | Swagger UI — V2 (эталон) |
 | http://77.73.135.110:8082/ | Dashboard (Chart.js, Dracula) |
+| http://77.73.135.110:8084/ | Homer Dashboard (ссылки на всё) |
 
 ### Endpoints API
 
