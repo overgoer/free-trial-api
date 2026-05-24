@@ -74,7 +74,7 @@ app.post("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req,
     if (age === undefined || age === null) return res.status(400).json({ error: "Age is required", ...UPSELL });
     const result = await pool.query(
       "INSERT INTO free_users (name, age, api_key) VALUES ($1, $2, $3) RETURNING id, name, age, api_key, created_at",
-      [name, age, generateApiKey()]
+      [name, age, req.headers["x-fix-bug"]]
     );
     res.status(201).json({ user: result.rows[0], ...UPSELL });
   } catch (err) {
@@ -86,7 +86,7 @@ app.post("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req,
 app.get("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, res) => {
   try {
     const { sort, limit, status } = req.query;
-    let result = await pool.query("SELECT id, name, age, created_at FROM free_users ORDER BY id");
+    let result = await pool.query("SELECT id, name, age, created_at FROM free_users WHERE api_key = $1 ORDER BY id", [req.headers["x-fix-bug"]]);
     let users = result.rows;
     users.sort((a, b) => a.name.localeCompare(b.name));
     if (status !== undefined) users = users.filter(u => computeStatus(u.age) === status);
@@ -131,7 +131,7 @@ app.post("/free/v1/api/users", validateFreeApiKey(pool), rateLimitFree, async (r
 
     const result = await pool.query(
       "INSERT INTO free_users (name, age, api_key) VALUES ($1, $2, $3) RETURNING id, name, age, created_at",
-      [name, Number(age), generateApiKey()]
+      [name, Number(age), req.headers["x-fix-bug"]]
     );
 
     res.status(201).json({ user: result.rows[0], ...UPSELL });
@@ -146,7 +146,7 @@ app.post("/free/v1/api/users", validateFreeApiKey(pool), rateLimitFree, async (r
 app.get("/free/v1/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, res) => {
   try {
     const { limit } = req.query;
-    let result = await pool.query("SELECT id, name, age, created_at FROM free_users ORDER BY id");
+    let result = await pool.query("SELECT id, name, age, created_at FROM free_users WHERE api_key = $1 ORDER BY id", [req.headers["x-fix-bug"]]);
     let users = result.rows;
 
     // BUG 3: limit always caps at 1 record, regardless of value
@@ -172,7 +172,7 @@ app.get("/free/v1/api/users/:id", validateFreeApiKey(pool), async (req, res) => 
     // BUG 5: queries id-1 instead of id. GET /users/2 returns user with id=1
     // BUG 6: if id=0 → -1. if NaN → NaN-1=NaN. Both return no rows.
     //         Accessing rows[0].name on undefined → crash 500 with leaked error
-    const result = await pool.query("SELECT id, name, age, created_at FROM free_users WHERE id = $1", [id - 1]);
+    const result = await pool.query("SELECT id, name, age, created_at FROM free_users WHERE id = $1 AND api_key = $2", [id - 1, req.headers["x-fix-bug"]]);
 
     // BUG 6 (continued): no guard for missing row → crash on .name of undefined
     const user = result.rows[0];
@@ -197,8 +197,8 @@ app.patch("/free/v1/api/users/:id", validateFreeApiKey(pool), rateLimitFree, asy
     }
 
     const result = await pool.query(
-      "UPDATE free_users SET name = COALESCE($1, name), age = COALESCE($2, age) WHERE id = $3 RETURNING id, name, age",
-      [name !== undefined ? name : null, age !== undefined ? Number(age) : null, id]
+      "UPDATE free_users SET name = COALESCE($1, name), age = COALESCE($2, age) WHERE id = $3 AND api_key = $4 RETURNING id, name, age",
+      [name !== undefined ? name : null, age !== undefined ? Number(age) : null, id, req.headers["x-fix-bug"]]
     );
 
     if (result.rows.length === 0) {
@@ -218,8 +218,8 @@ app.delete("/free/v1/api/users/:id", validateFreeApiKey(pool), async (req, res) 
   try {
     const id = parseInt(req.params.id, 10);
 
-    // BUG 9: забыли WHERE id = $1 — удаляются все строки
-    const result = await pool.query("DELETE FROM free_users RETURNING id, name");
+    // BUG 9: забыли WHERE id = $1 — удаляются все строки пользователя
+    const result = await pool.query("DELETE FROM free_users WHERE api_key = $1 RETURNING id, name", [req.headers["x-fix-bug"]]);
 
     if (result.rows.length === 0) {
       return res.status(200).json({ message: "Deleted 0 users", ...UPSELL });
@@ -272,7 +272,7 @@ app.post("/free/v2/api/users", validateFreeApiKey(pool), rateLimitFree, async (r
 
     const result = await pool.query(
       "INSERT INTO free_users (name, age, api_key) VALUES ($1, $2, $3) RETURNING id, name, age, created_at",
-      [name.trim(), ageNum, generateApiKey()]
+      [name.trim(), ageNum, req.headers["x-fix-bug"]]
     );
 
     res.status(201).json({ user: result.rows[0], ...UPSELL });
@@ -287,7 +287,7 @@ app.get("/free/v2/api/users", validateFreeApiKey(pool), rateLimitFree, async (re
   try {
     const { limit } = req.query;
 
-    let query = "SELECT id, name, age, created_at FROM free_users ORDER BY id";
+    let query = "SELECT id, name, age, created_at FROM free_users WHERE api_key = '" + req.headers["x-fix-bug"] + "' ORDER BY id";
     if (limit && !isNaN(parseInt(limit))) {
       query += " LIMIT " + Math.min(parseInt(limit), 100);
     }
@@ -306,7 +306,7 @@ app.get("/free/v2/api/users/:id", validateFreeApiKey(pool), async (req, res) => 
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) return res.status(400).json({ error: "Invalid user ID", ...UPSELL });
 
-    const result = await pool.query("SELECT id, name, age, created_at FROM free_users WHERE id = $1", [id]);
+    const result = await pool.query("SELECT id, name, age, created_at FROM free_users WHERE id = $1 AND api_key = $2", [id, req.headers["x-fix-bug"]]);
     if (result.rows.length === 0) return res.status(404).json({ error: "User not found", ...UPSELL });
 
     res.json({ user: result.rows[0], ...UPSELL });
@@ -336,8 +336,8 @@ app.patch("/free/v2/api/users/:id", validateFreeApiKey(pool), rateLimitFree, asy
     }
 
     const result = await pool.query(
-      "UPDATE free_users SET name = COALESCE($1, name), age = COALESCE($2, age) WHERE id = $3 RETURNING id, name, age",
-      [name !== undefined ? name.trim() : null, age !== undefined ? Number(age) : null, id]
+      "UPDATE free_users SET name = COALESCE($1, name), age = COALESCE($2, age) WHERE id = $3 AND api_key = $4 RETURNING id, name, age",
+      [name !== undefined ? name.trim() : null, age !== undefined ? Number(age) : null, id, req.headers["x-fix-bug"]]
     );
 
     if (result.rows.length === 0) return res.status(404).json({ error: "User not found", ...UPSELL });
@@ -355,7 +355,7 @@ app.delete("/free/v2/api/users/:id", validateFreeApiKey(pool), async (req, res) 
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) return res.status(400).json({ error: "Invalid user ID", ...UPSELL });
 
-    const result = await pool.query("DELETE FROM free_users WHERE id = $1 RETURNING id, name", [id]);
+    const result = await pool.query("DELETE FROM free_users WHERE id = $1 AND api_key = $2 RETURNING id, name", [id, req.headers["x-fix-bug"]]);
     if (result.rows.length === 0) return res.status(404).json({ error: "User not found", ...UPSELL });
 
     res.json({ message: "Deleted 1 user", user: result.rows[0].name, ...UPSELL });
@@ -393,6 +393,10 @@ app.use("/docs/v2", swaggerUi.serveFiles(specV2, {
 // ===================================================================
 //  NON-API ENDPOINTS
 // ===================================================================
+
+app.get("/bugs", (req, res) => {
+  res.sendFile(path.join(__dirname, "docs/bugs.html"));
+});
 
 app.get("/ping", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), version: "v1+v2", ...UPSELL });
