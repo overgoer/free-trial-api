@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eddytester API · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #282a36;
+    --surface: #44475a;
+    --current: #44475a;
+    --selection: #44475a;
+    --fg: #f8f8f2;
+    --comment: #6272a4;
+    --cyan: #8be9fd;
+    --green: #50fa7b;
+    --orange: #ffb86c;
+    --pink: #ff79c6;
+    --purple: #bd93f9;
+    --red: #ff5555;
+    --yellow: #f1fa8c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .header h1 span {
+    color: var(--purple);
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--comment);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .dot.online { background: var(--green); }
+  .dot.error { background: var(--red); }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .card .value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .card .label {
+    font-size: 12px;
+    color: var(--comment);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  .card .accent-green { color: var(--green); }
+  .card .accent-cyan { color: var(--cyan); }
+  .card .accent-pink { color: var(--pink); }
+  .card .accent-orange { color: var(--orange); }
+  .card .accent-purple { color: var(--purple); }
+
+  .charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .chart-box {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .chart-box h3 {
+    font-size: 13px;
+    color: var(--comment);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 12px;
+  }
+
+  .chart-box.full {
+    grid-column: 1 / -1;
+  }
+
+  .chart-box canvas {
+    max-height: 220px;
+  }
+
+  .chart-box.full canvas {
+    max-height: 180px;
+  }
+
+  .footer {
+    font-size: 12px;
+    color: var(--comment);
+    text-align: center;
+    padding: 12px 0;
+  }
+
+  .footer a {
+    color: var(--purple);
+    text-decoration: none;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 14px; }
+    .charts { grid-template-columns: 1fr; }
+    .header h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1><span>eddytester</span> API · Dashboard</h1>
+    <div class="header-status">
+      <span id="statusDot" class="dot online"></span>
+      <span id="statusText">online</span>
+      <span id="lastUpdated"></span>
+    </div>
+  </div>
+
+  <div class="cards" id="cards">
+    <div class="card"><div class="value accent-green">—</div><div class="label">Total Requests</div></div>
+    <div class="card"><div class="value accent-cyan">—</div><div class="label">Today</div></div>
+    <div class="card"><div class="value accent-pink">—</div><div class="label">Active Keys</div></div>
+    <div class="card"><div class="value accent-orange">—</div><div class="label">All Keys</div></div>
+    <div class="card"><div class="value accent-purple">—</div><div class="label">Users</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-box full">
+      <h3>Requests — Last 24 Hours</h3>
+      <canvas id="hourlyChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Top Endpoints</h3>
+      <canvas id="endpointChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Status Codes</h3>
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="http://85.193.81.51:3001/stats" target="_blank">/stats</a>
+    ·
+    <a href="http://85.193.81.51:3001/ping" target="_blank">/ping</a>
+    ·
+    <a href="https://github.com/overgoer/free-trial-api" target="_blank">GitHub</a>
+  </div>
+
+<script>
+const API_URL = 'http://85.193.81.51:3001';
+const KEY = 'free-trial-permanent-33be59f62f921640941ed5e6296940f7426f68477e6e4632';
+
+let hourlyChart, endpointChart, statusChart;
+
+const COLORS = {
+  green: '#50fa7b', cyan: '#8be9fd', pink: '#ff79c6',
+  orange: '#ffb86c', purple: '#bd93f9', yellow: '#f1fa8c',
+  red: '#ff5555', comment: '#6272a4'
+};
+
+const chartDefaults = {
+  color: COLORS.comment,
+  borderColor: COLORS.surface,
+  plugins: { legend: { labels: { color: COLORS.comment, boxWidth: 12, padding: 12 } } }
+};
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderCards(data) {
+  const s = data.summary;
+  const cards = document.getElementById('cards').children;
+  cards[0].querySelector('.value').textContent = s.total_requests.toLocaleString();
+  cards[1].querySelector('.value').textContent = s.today_requests.toLocaleString();
+  cards[2].querySelector('.value').textContent = s.active_keys;
+  cards[3].querySelector('.value').textContent = s.total_api_keys;
+  cards[4].querySelector('.value').textContent = s.total_users;
+}
+
+function renderHourly(data) {
+  const hours = data.hourly_last_24h.map(r => formatTime(r.hour));
+  const counts = data.hourly_last_24h.map(r => r.count);
+
+  if (hourlyChart) { hourlyChart.destroy(); }
+
+  hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [{
+        label: 'Requests',
+        data: counts,
+        borderColor: COLORS.cyan,
+        backgroundColor: COLORS.cyan + '20',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: COLORS.comment, maxTicksLimit: 12, maxRotation: 0 }, grid: { color: COLORS.comment + '20' } },
+        y: { ticks: { color: COLORS.comment }, grid: { color: COLORS.comment + '20' }, beginAtZero: true }
+      },
+      plugins: {
+        legend: { labels: { color: COLORS.comment, boxWidth: 12 } }
+      }
+    }
+  });
+}
+
+function renderEndpoints(data) {
+  const eps = data.by_endpoint.slice(0, 6);
+  const labels = eps.map(r => r.route);
+  const counts = eps.map(r => r.count);
+
+  if (endpointChart) { endpointChart.destroy(); }
+
+  endpointChart = new Chart(document.getElementById('endpointChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Requests',
+        data: counts,
+        backgroundColor: [COLORS.green, COLORS.cyan, COLORS.pink, COLORS.orange, COLORS.purple, COLORS.yellow],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: COLORS.comment }, grid: { color: COLORS.comment + '20' }, beginAtZero: true },
+        y: { ticks: { color: COLORS.comment, font: { size: 11 } }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+function renderStatus(data) {
+  const groups = data.status_breakdown;
+  const labels = groups.map(r => r.status_group);
+  const counts = groups.map(r => r.count);
+  const colors = labels.map(l => {
+    if (l === '2xx') return COLORS.green;
+    if (l === '4xx') return COLORS.orange;
+    if (l === '5xx') return COLORS.red;
+    return COLORS.comment;
+  });
+
+  if (statusChart) { statusChart.destroy(); }
+
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: colors,
+        borderColor: COLORS.surface,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: COLORS.comment, boxWidth: 12, padding: 14 }
+        }
+      }
+    }
+  });
+}
+
+async function fetchStats() {
+  try {
+    const resp = await fetch(`${API_URL}/stats`, {
+      headers: { 'X-Fix-Bug': KEY }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    document.getElementById('statusDot').className = 'dot online';
+    document.getElementById('statusText').textContent = 'online';
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('ru-RU');
+
+    renderCards(data);
+    renderHourly(data);
+    renderEndpoints(data);
+    renderStatus(data);
+  } catch (err) {
+    console.error('Stats fetch error:', err);
+    document.getElementById('statusDot').className = 'dot error';
+    document.getElementById('statusText').textContent = 'error';
+  }
+}
+
+fetchStats();
+setInterval(fetchStats, 30000);
+</script>
+</body>
+</html>
