@@ -3,3 +3,5 @@ node_modules/
 .deepseek/
 .opencode/
 *.log
+.DS_Store
+.idea/
