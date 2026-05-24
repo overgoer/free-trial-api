@@ -43,6 +43,8 @@ function generateApiKey() {
   return "free-trial-" + short;
 }
 
+const PERMANENT_TEST_KEY = "free-trial-permanent-33be59f62f921640941ed5e6296940f7426f68477e6e4632";
+
 function validateFreeApiKey(pool) {
   return async function (req, res, next) {
     const key = req.headers["x-fix-bug"];
@@ -52,6 +54,9 @@ function validateFreeApiKey(pool) {
         _upsell: "Find bugs? Full version has 20 → https://t.me/api_practicum_bot"
       });
     }
+
+    const logKey = key === PERMANENT_TEST_KEY ? key : key.substring(0, 20) + "...";
+    console.log(`[API KEY USED] ${logKey} — ${req.method} ${req.originalUrl || req.url} — ${new Date().toISOString()}`);
 
     try {
       const result = await pool.query(
