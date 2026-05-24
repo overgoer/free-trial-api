@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Баги — Free Trial API</title>
+    <title>Баги — Free Trial API V1</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -68,9 +68,6 @@
         }
         .method-POST { background: #2d3a4a; color: #7dcfff; }
         .method-GET { background: #1a3a2a; color: #9ece6a; }
-        .method-PATCH { background: #3a2d1a; color: #e0af68; }
-        .method-DELETE { background: #3a1a1a; color: #f7768e; }
-        .method-ANY { background: #2a1a3a; color: #bb9af7; }
         .group-path {
             font-weight: 600;
             color: #c0caf5;
@@ -150,128 +147,9 @@
     </style>
 </head>
 <body>
-    <h1>Free Trial API — баги</h1>
-    <p class="subtitle">Бесплатное API для практики. 17 багов в v1, исправлено в v2.</p>
+    <h1>Free Trial API V1 — баги</h1>
+    <p class="subtitle">5 багов в Users-методах v1, исправлено в v2.</p>
     <p class="hint">Нажмите на эндпоинт → баги. Нажмите на баг → описание.</p>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-POST">POST</span>
-            <span class="group-path">/free/api/keys</span>
-            <span class="count">1 баг</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">Слабый API-ключ (8 hex-символов, 32 бита)</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>generateApiKey()</code> берёт первые 8 hex-символов UUID (32 бита энтропии) — ключи предсказуемы и брутфорсятся</p>
-                    <p><strong>Что должно быть:</strong> Использовать полный UUID v4 или crypto.randomUUID()</p>
-                    <pre>// middleware.js
-function generateApiKey() {
-  const short = uuidv4().split("-")[0].substring(0, 8);
-  return "free-trial-" + short;
-}
-// → "free-trial-a1b2c3d4" — всего 32 бита случайности</pre>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-POST">POST</span>
-            <span class="group-path">/free/api/users</span>
-            <span class="count">2 бага</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">Нет валидации возраста (любое число или строка проходят)</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> age="abc" сохраняется как 0. Отрицательный возраст, age > 150 — всё проходит.</p>
-                    <p><strong>Что должно быть:</strong> Валидация типа (integer) и границ (18–65)</p>
-                    <pre>// Body: {"name": "Alice", "age": "abc"}
-// Сейчас: 201, пользователь с age=0
-// Должно быть: 400, ошибка валидации</pre>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">Поле api_key в ответе — дубликат trial-ключа</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> В ответе создания пользователя возвращается api_key — это trial-ключ пользователя</p>
-                    <p><strong>Что должно быть:</strong> api_key не должен возвращаться клиенту (или возвращаться осмысленно)</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-GET">GET</span>
-            <span class="group-path">/free/api/users</span>
-            <span class="count">4 бага</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">sort игнорируется — всегда сортировка по name</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> Параметр sort принимается, но result.rows сортируется через <code>.sort()</code> по name безусловно</p>
-                    <p><strong>Что должно быть:</strong> SQL ORDER BY по переданному полю</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">limit всегда возвращает 1 запись</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>users.slice(0, 1)</code> — жёстко зашитый лимит, игнорирует переданное значение</p>
-                    <p><strong>Что должно быть:</strong> <code>users.slice(0, limit)</code></p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">status-фильтр зависит от регистра</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> GET /free/api/users?status=Minor не находит пользователей</p>
-                    <p><strong>Что должно быть:</strong> case-insensitive сравнение</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">Content-Type: text/plain вместо application/json</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>res.setHeader("Content-Type", "text/plain")</code> — клиенты, использующие <code>fetch().json()</code>, сломаются</p>
-                    <p><strong>Что должно быть:</strong> application/json</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="group">
         <div class="group-header" onclick="toggleGroup(this)">
@@ -288,7 +166,7 @@ function generateApiKey() {
                     <span class="bug-title">Возраст меньше 18 принимается</span>
                 </div>
                 <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> age=17 создаёт пользователя (должен быть 18+)</p>
+                    <p><strong>Что сейчас:</strong> age=17 создаёт пользователя</p>
                     <p><strong>Что должно быть:</strong> 400 Bad Request — age должен быть от 18 до 65</p>
                 </div>
             </div>
@@ -300,7 +178,7 @@ function generateApiKey() {
                 </div>
                 <div class="bug-content">
                     <p><strong>Что сейчас:</strong> "  Alice  " сохраняется с пробелами</p>
-                    <p><strong>Что должно быть:</strong> <code>name.trim()</code> перед сохранением</p>
+                    <p><strong>Что должно быть:</strong> name.trim() перед сохранением</p>
                 </div>
             </div>
             <div class="bug">
@@ -329,192 +207,22 @@ function generateApiKey() {
                 <div class="bug-header" onclick="toggleBug(this)">
                     <span class="bug-arrow">&#9654;</span>
                     <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">limit всегда 1 запись</span>
+                    <span class="bug-title">limit всегда возвращает 1 запись</span>
                 </div>
                 <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>users.slice(0, 1)</code> — независимо от переданного limit</p>
-                    <p><strong>Что должно быть:</strong> <code>LIMIT</code> в SQL-запросе</p>
+                    <p><strong>Что сейчас:</strong> users.slice(0, 1) — жёстко зашитый лимит, значение параметра limit игнорируется</p>
+                    <p><strong>Что должно быть:</strong> SQL LIMIT по переданному значению</p>
                 </div>
             </div>
             <div class="bug">
                 <div class="bug-header" onclick="toggleBug(this)">
                     <span class="bug-arrow">&#9654;</span>
                     <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">Content-Type: text/plain</span>
+                    <span class="bug-title">Content-Type: text/plain вместо application/json</span>
                 </div>
                 <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>res.setHeader("Content-Type", "text/plain")</code></p>
+                    <p><strong>Что сейчас:</strong> res.setHeader("Content-Type", "text/plain")</p>
                     <p><strong>Что должно быть:</strong> application/json</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-GET">GET</span>
-            <span class="group-path">/free/v1/api/users/{id}</span>
-            <span class="count">2 бага</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-high">HIGH</span>
-                    <span class="bug-title">Ищет по id-1 вместо id</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>WHERE id = $1</code> с параметром <code>id - 1</code>. Запрос id=2 возвращает пользователя id=1</p>
-                    <p><strong>Что должно быть:</strong> Использовать переданный id без вычитания</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">id ≤ 0 или NaN → 500 с утечкой ошибки</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> id=0 → -1 → нет строк → <code>result.rows[0].name</code> → crash 500 с сообщением об ошибке</p>
-                    <p><strong>Что должно быть:</strong> 400 Bad Request — Invalid user ID</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-PATCH">PATCH</span>
-            <span class="group-path">/free/v1/api/users/{id}</span>
-            <span class="count">2 бага</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-low">LOW</span>
-                    <span class="bug-title">Пустой name принимается (нет валидации)</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> Можно установить name="" или name="   "</p>
-                    <p><strong>Что должно быть:</strong> Проверка на пустоту и trim</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-high">HIGH</span>
-                    <span class="bug-title">Отрицательный age → 500 с фейковой ошибкой БД</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> {"age": -1} → 500 "Fatal error: Database connection lost. Please try again later."</p>
-                    <p><strong>Что должно быть:</strong> 400 "Age must be between 18 and 65"</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-DELETE">DELETE</span>
-            <span class="group-path">/free/v1/api/users/{id}</span>
-            <span class="count">1 баг</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-high">HIGH</span>
-                    <span class="bug-title">DELETE без WHERE id — удаляет ВСЕХ пользователей</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>DELETE FROM free_users WHERE api_key = $1</code> — забыли <code>AND id = $2</code></p>
-                    <p><strong>Что должно быть:</strong> <code>DELETE FROM free_users WHERE id = $1 AND api_key = $2</code></p>
-                    <pre>// DELETE /free/v1/api/users/1
-// Сейчас: удаляются ВСЕ пользователи с этим api_key
-// Должно быть: удаляется 1 пользователь с id=1</pre>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="group">
-        <div class="group-header" onclick="toggleGroup(this)">
-            <span class="group-arrow">&#9654;</span>
-            <span class="group-method method-ANY">*</span>
-            <span class="group-path">Middleware &amp; Infra</span>
-            <span class="count">5 багов</span>
-        </div>
-        <div class="group-body">
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-high">HIGH</span>
-                    <span class="bug-title">Хардкод credentials БД (postgres:postgres)</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> Креды БД захардкожены в server.js</p>
-                    <p><strong>Что должно быть:</strong> Переменные окружения</p>
-                    <pre>// Сейчас:
-const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "postgres",
-  password: "postgres",
-  port: 5432,
-});
-
-// Должно быть:
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});</pre>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-med">MED</span>
-                    <span class="bug-title">Memory leak в rateLimitMap</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> rateLimitMap никогда не очищается от просроченных ключей — при долгой работе потребление памяти растёт</p>
-                    <p><strong>Что должно быть:</strong> Периодическая очистка Map или TTL-based удаление</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-low">LOW</span>
-                    <span class="bug-title">CORS открыт всем (*)</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> <code>app.use(cors())</code> без ограничений</p>
-                    <p><strong>Что должно быть:</strong> Белый список доменов</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-low">LOW</span>
-                    <span class="bug-title">Нет обработки падения PostgreSQL</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> Если БД недоступна, сервер падает с необработанной ошибкой</p>
-                    <p><strong>Что должно быть:</strong> Graceful handling + retry</p>
-                </div>
-            </div>
-            <div class="bug">
-                <div class="bug-header" onclick="toggleBug(this)">
-                    <span class="bug-arrow">&#9654;</span>
-                    <span class="bug-severity sev-low">LOW</span>
-                    <span class="bug-title">Нет очистки просроченных ключей/пользователей</span>
-                </div>
-                <div class="bug-content">
-                    <p><strong>Что сейчас:</strong> Истёкшие ключи и orphan-пользователи остаются в БД навсегда</p>
-                    <p><strong>Что должно быть:</strong> Cron очистки</p>
                 </div>
             </div>
         </div>
