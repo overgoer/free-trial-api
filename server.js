@@ -70,8 +70,15 @@ app.post("/free/api/keys", async (req, res) => {
 app.post("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, res) => {
   try {
     const { name, age } = req.body;
-    if (!name || name === "") return res.status(400).json({ error: "Name is required", ...UPSELL });
-    if (age === undefined || age === null) return res.status(400).json({ error: "Age is required", ...UPSELL });
+
+    // BUG 1: проверка только на undefined — name: "" проходит как валидный
+    if (name === undefined) return res.status(400).json({ error: "Name is required", ...UPSELL });
+
+    // BUG 2: age не валидируется — undefined/некорректное age летит в БД,
+    //        PostgreSQL падает с 500 вместо 400 Bad Request
+
+    // BUG 5: нет unique constraint на name+api_key — дубликаты Alice создаются без ошибки
+
     const result = await pool.query(
       "INSERT INTO free_users (name, age, api_key) VALUES ($1, $2, $3) RETURNING id, name, age, api_key, created_at",
       [name, age, req.headers["x-fix-bug"]]
@@ -79,7 +86,8 @@ app.post("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req,
     res.status(201).json({ user: result.rows[0], ...UPSELL });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ error: "Internal server error", ...UPSELL });
+    // BUG 6: сообщение об ошибке PostgreSQL (схема, SQL-запрос) утекает клиенту
+    res.status(500).json({ error: err.message, ...UPSELL });
   }
 });
 

@@ -112,6 +112,59 @@ curl -s -X POST http://localhost:3001/free/api/users \
 }
 ```
 
+**Новые баги этого endpoint (v 2026-05-28):**
+
+#### Bug 6 — Пустое имя создаёт пользователя
+Валидация `name` проверяет только `undefined`. `name: ""` проходит и создаёт пользователя с пустым именем.
+
+```bash
+# Пустое имя проходит → 201 вместо 400
+curl -s -X POST http://localhost:3001/free/api/users \
+  -H "x-fix-bug: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "", "age": 25}' | jq
+```
+
+#### Bug 7 — Отсутствие age → 500 вместо 400
+Поле `age` не валидируется на обязательность. Если не передать age, он уходит `undefined` в PostgreSQL, который падает с `null value in column "age" violates not-null constraint`.
+
+```bash
+# Без age → 500 Internal Server Error со стеком ошибки
+curl -s -X POST http://localhost:3001/free/api/users \
+  -H "x-fix-bug: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice"}' | jq
+```
+
+#### Bug 8 — Дубликаты пользователей разрешены
+Нет ограничения уникальности — можно создать сколько угодно пользователей с одинаковыми данными.
+
+```bash
+# Два одинаковых пользователя создаются без ошибки
+curl -s -X POST http://localhost:3001/free/api/users \
+  -H "x-fix-bug: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice", "age": 30}' | jq
+curl -s -X POST http://localhost:3001/free/api/users \
+  -H "x-fix-bug: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice", "age": 30}' | jq
+```
+
+#### Bug 9 — Error message наружу
+При ошибке БД (например, при невалидном age) сообщение ошибки с деталями схемы и SQL-запроса утекает в ответ клиенту.
+
+```bash
+# В ответе виден PostgreSQL-запрос и детали схемы
+curl -s -X POST http://localhost:3001/free/api/users \
+  -H "x-fix-bug: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Bob"}' | jq
+# → "error": "insert into free_users (name, age, api_key) values ... null value in column..."
+```
+
+---
+
 [ISSUE] Заголовок аутентификации называется `x-fix-bug` вместо стандартного `Authorization` или `x-api-key`.
 [ISSUE] `age` не валидируется на тип (строка "abc" пройдёт в БД как 0) и на разумные границы (отрицательные, >150).
 [QUESTION] Поле `api_key` в ответе создания пользователя — это API-ключ *пользователя* или дубликат trial-ключа? По коду это новый `generateApiKey()` — зачем пользователю отдельный ключ?
@@ -248,6 +301,10 @@ done
 | 11 | 🟢 Low | `cors()` без ограничений (open bar) | server.js |
 | 12 | 🟢 Low | Нет обработки падения PostgreSQL | server.js |
 | 13 | 🟢 Low | Нет очистки просроченных ключей/пользователей | — |
+| 14 | 🟡 Medium | **NEW** Пустое имя проходит (name: "" → 201) | server.js |
+| 15 | 🟡 Medium | **NEW** Отсутствие age → 500 вместо 400 | server.js |
+| 16 | 🟢 Low | **NEW** Дубликаты пользователей не проверяются | server.js |
+| 17 | 🟡 Medium | **NEW** Error message утекает клиенту (утечка схемы) | server.js |
 
 ## Стек
 
