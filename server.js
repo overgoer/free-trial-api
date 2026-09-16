@@ -172,6 +172,7 @@ const TRIAL_BUGS = {
   "idminus":   { name: "GET /users/2 возвращает пользователя с id=1", method: "GET /users/:id" },
   "crash500":  { name: "Некорректный id роняет сервер с 500", method: "GET /users/:id" },
 };
+const TRIAL_METHODS = ["POST /users", "GET /users", "GET /users/:id"];
 const TRIAL_TOTAL = Object.keys(TRIAL_BUGS).length;
 
 function originAllowed(req) {
@@ -194,7 +195,19 @@ app.post("/free/api/progress", validateFreeApiKey(pool), rateLimitFree, async (r
   if (!originAllowed(req)) {
     return res.status(403).json({ error: "Forbidden", ...UPSELL });
   }
+  const resetMethod = req.body && req.body.reset_method;
   const selected = Array.isArray(req.body && req.body.selected) ? req.body.selected : [];
+  const key = req.headers["x-fix-bug"];
+  if (resetMethod && TRIAL_METHODS.includes(resetMethod)) {
+    const prev = await pool.query("SELECT found_bugs FROM free_progress WHERE api_key = $1", [key]);
+    const keep = (prev.rows.length ? prev.rows[0].found_bugs || [] : [])
+      .filter((bid) => TRIAL_BUGS[bid] && TRIAL_BUGS[bid].method !== resetMethod);
+    await pool.query(
+      "INSERT INTO free_progress (api_key, found_bugs) VALUES ($1, $2) ON CONFLICT (api_key) DO UPDATE SET found_bugs = EXCLUDED.found_bugs",
+      [key, JSON.stringify(keep)]
+    );
+    return res.json({ found: keep, total: TRIAL_TOTAL, ...UPSELL });
+  }
   const verdict = selected.map((bid) => ({
     bug_id: bid,
     is_bug: !!TRIAL_BUGS[bid],
@@ -202,7 +215,6 @@ app.post("/free/api/progress", validateFreeApiKey(pool), rateLimitFree, async (r
   }));
   const correct = verdict.filter((v) => v.is_bug).map((v) => v.bug_id);
   const wrong = verdict.filter((v) => !v.is_bug).map((v) => v.bug_id);
-  const key = req.headers["x-fix-bug"];
   const prev = await pool.query("SELECT found_bugs FROM free_progress WHERE api_key = $1", [key]);
   const merged = Array.from(new Set([...(prev.rows.length ? prev.rows[0].found_bugs || [] : []), ...correct]));
   await pool.query(
