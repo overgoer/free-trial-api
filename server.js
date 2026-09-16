@@ -41,7 +41,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const UPSELL = { _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot" };
+const UPSELL = { _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial" };
 
 // ─── Helpers ─────────────────────────────────────────────
 function computeStatus(age) {
@@ -110,6 +110,57 @@ app.get("/free/api/users", validateFreeApiKey(pool), rateLimitFree, async (req, 
 // ===================================================================
 //  V1 — BUGGY VERSION (9 bugs across 5 endpoints)
 // ===================================================================
+
+// ─── Продление триала за email ───────────────────────────
+const nodemailer = require("nodemailer");
+const MAIL_USER = process.env.YANDEX_USER || "api.practicum@mail.ru";
+const MAIL_PASS = process.env.YANDEX_PASS || "gdh2eRXXWPMOYn3YY5Bb";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.mail.ru", port: 465, secure: true,
+  auth: { user: MAIL_USER, pass: MAIL_PASS },
+});
+
+app.post("/free/api/extend", async (req, res) => {
+  // только лендинг имеет право дёргать продление
+  const origin = req.headers.origin || "";
+  if (origin && !origin.includes("eddytester.com")) {
+    return res.status(403).json({ error: "Forbidden", ...UPSELL });
+  }
+  const email = (req.body && req.body.email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: "Нужен корректный email", ...UPSELL });
+  }
+  try {
+    const used = await pool.query("SELECT 1 FROM free_trial_emails WHERE email = $1", [email]);
+    if (used.rowCount > 0) {
+      return res.status(200).json({
+        error: "Этот email уже получал продление",
+        _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com",
+      });
+    }
+    const key = generateApiKey();
+    await pool.query(
+      "INSERT INTO free_trial_emails (email, key, created_at, expires_at) VALUES ($1, $2, NOW(), NOW() + INTERVAL '48 hours')",
+      [email, key]
+    );
+    try {
+      await transporter.sendMail({
+        from: '"API Практикум" <api.practicum@mail.ru>',
+        to: email,
+        subject: "Твой ключ на +48 часов",
+        text: "Ключ: " + key + "\n\nОн работает 48 часов. Документация и старт: https://eddytester.com/trial\n\nНашёл баги? Полная версия — 48 багов, 19 уроков: https://eddytester.com",
+      });
+    } catch (mailErr) {
+      console.error("extend mail error:", mailErr.message);
+    }
+    res.status(201).json({ key, expires_at: null, extended: true, ...UPSELL });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Internal server error", ...UPSELL });
+  }
+});
 
 app.post("/free/v1/api/keys", async (req, res) => {
   try {
@@ -383,8 +434,41 @@ const swaggerCss = theme.getBuffer(SwaggerThemeNameEnum.DRACULA);
 const specV1 = yaml.load(fs.readFileSync(path.join(__dirname, "docs/openapi-v1.yaml"), "utf8"));
 const specV2 = yaml.load(fs.readFileSync(path.join(__dirname, "docs/openapi-v2.yaml"), "utf8"));
 
+// Брендированная нижняя панель на страницах Swagger — видна всегда,
+// вшита в HTML (не блокируется adblock/скриптами), не убирается при стриме.
+const brandingCss = `
+#practicum-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 36px; z-index: 99999;
+  background: rgba(20,20,30,0.92);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center;
+  justify-content: center; gap: 20px;
+  font: 13px/1 'JetBrains Mono', 'Courier New', monospace;
+  color: #888;
+  backdrop-filter: blur(4px);
+  -webkit-font-smoothing: antialiased;
+}
+#practicum-bar a {
+  color: #7eb8f7; text-decoration: none; transition: color .15s;
+}
+#practicum-bar a:hover { color: #b3d9ff; text-decoration: underline; }
+#practicum-bar .sep { color: #444; }
+.swagger-ui .wrapper { padding-bottom: 50px; }
+`;
+const brandingJsTag = `
+;(function(){
+  if (document.getElementById('practicum-bar')) return;
+  var bar = document.createElement('div');
+  bar.id = 'practicum-bar';
+  bar.innerHTML = '<span style="color:#bbb">🧪 API Практикум</span> <span class="sep">|</span> Учебный стенд с реальными багами <span class="sep">|</span> <a href="https://eddytester.com/api-practicum" target="_blank">Купить полную версию</a> <span class="sep">·</span> <a href="https://t.me/api_praktikum_bot" target="_blank">@api_praktikum_bot</a> <span class="sep">·</span> <a href="https://t.me/eddytester" target="_blank">@eddytester</a>';
+  document.body.appendChild(bar);
+})();
+`;
+
 const swaggerOptions = {
-  customCss: swaggerCss,
+  customCss: brandingCss + swaggerCss,
+  customJsStr: brandingJsTag,
   customSiteTitle: "eddytester API — V1",
 };
 

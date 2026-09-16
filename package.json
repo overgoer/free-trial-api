@@ -13,6 +13,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "js-yaml": "^4.1.1",
+    "nodemailer": "^10.0.10",
     "pg": "^8.20.0",
     "swagger-themes": "^1.4.3",
     "swagger-ui-express": "^5.0.1",

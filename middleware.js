@@ -7,7 +7,7 @@ function rateLimitFree(req, res, next) {
   if (!apiKey) {
     return res.status(401).json({
       error: "Missing API key",
-      _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot"
+      _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial"
     });
   }
 
@@ -31,7 +31,7 @@ function rateLimitFree(req, res, next) {
     return res.status(429).json({
       error: "Rate limit exceeded",
       retry_after: 60,
-      _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot"
+      _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial"
     });
   }
 
@@ -51,7 +51,7 @@ function validateFreeApiKey(pool) {
     if (!key || key.trim() === "") {
       return res.status(401).json({
         error: "Missing or empty API key",
-        _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot"
+        _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial"
       });
     }
 
@@ -67,7 +67,7 @@ function validateFreeApiKey(pool) {
       if (result.rows.length === 0) {
         return res.status(401).json({
           error: "Invalid API key",
-          _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot"
+          _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial"
         });
       }
 
@@ -75,7 +75,7 @@ function validateFreeApiKey(pool) {
       if (new Date(row.expires_at) < new Date()) {
         return res.status(403).json({
           error: "Free trial expired",
-          _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot"
+          _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial"
         });
       }
 
@@ -84,7 +84,7 @@ function validateFreeApiKey(pool) {
       console.error("validateFreeApiKey error:", err.message);
       return res.status(500).json({
         error: "Internal server error",
-        _upsell: "Нашли баги? Полная версия — 20+ багов → https://t.me/api_practikum_bot"
+        _upsell: "Полная версия — 48 багов, 19 уроков → https://eddytester.com/trial"
       });
     }
   };
