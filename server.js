@@ -203,11 +203,13 @@ app.post("/free/api/progress", validateFreeApiKey(pool), rateLimitFree, async (r
   const correct = verdict.filter((v) => v.is_bug).map((v) => v.bug_id);
   const wrong = verdict.filter((v) => !v.is_bug).map((v) => v.bug_id);
   const key = req.headers["x-fix-bug"];
+  const prev = await pool.query("SELECT found_bugs FROM free_progress WHERE api_key = $1", [key]);
+  const merged = Array.from(new Set([...(prev.rows.length ? prev.rows[0].found_bugs || [] : []), ...correct]));
   await pool.query(
     "INSERT INTO free_progress (api_key, found_bugs) VALUES ($1, $2) ON CONFLICT (api_key) DO UPDATE SET found_bugs = EXCLUDED.found_bugs",
-    [key, JSON.stringify(correct)]
+    [key, JSON.stringify(merged)]
   );
-  res.json({ verdict, found: correct, wrong, total: TRIAL_TOTAL, ...UPSELL });
+  res.json({ verdict, found: merged, wrong, total: TRIAL_TOTAL, ...UPSELL });
 });
 
 app.post("/free/v1/api/keys", async (req, res) => {
