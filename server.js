@@ -162,6 +162,54 @@ app.post("/free/api/extend", async (req, res) => {
   }
 });
 
+// ─── Мини-урок: эталон багов и вердикт ───────────────────
+const TRIAL_BUGS = {
+  "age17":     { name: "Возраст 17 принимается", method: "POST /users" },
+  "notrim":    { name: "Имя не обрезается от пробелов", method: "POST /users" },
+  "nolimit":   { name: "Нет ограничения длины имени", method: "POST /users" },
+  "limit1":    { name: "Лимит всегда отдаёт одну запись", method: "GET /users" },
+  "content":   { name: "Content-Type: text/plain вместо JSON", method: "GET /users" },
+  "idminus":   { name: "GET /users/2 возвращает пользователя с id=1", method: "GET /users/:id" },
+  "crash500":  { name: "Некорректный id роняет сервер с 500", method: "GET /users/:id" },
+};
+const TRIAL_TOTAL = Object.keys(TRIAL_BUGS).length;
+
+function originAllowed(req) {
+  const origin = req.headers.origin || "";
+  return !origin || origin.includes("eddytester.com");
+}
+
+app.get("/free/api/progress", validateFreeApiKey(pool), async (req, res) => {
+  try {
+    const key = req.headers["x-fix-bug"];
+    const r = await pool.query("SELECT found_bugs FROM free_progress WHERE api_key = $1", [key]);
+    const found = r.rows.length ? (r.rows[0].found_bugs || []) : [];
+    res.json({ found, total: TRIAL_TOTAL, ...UPSELL });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error", ...UPSELL });
+  }
+});
+
+app.post("/free/api/progress", validateFreeApiKey(pool), rateLimitFree, async (req, res) => {
+  if (!originAllowed(req)) {
+    return res.status(403).json({ error: "Forbidden", ...UPSELL });
+  }
+  const selected = Array.isArray(req.body && req.body.selected) ? req.body.selected : [];
+  const verdict = selected.map((bid) => ({
+    bug_id: bid,
+    is_bug: !!TRIAL_BUGS[bid],
+    name: TRIAL_BUGS[bid] ? TRIAL_BUGS[bid].name : null,
+  }));
+  const correct = verdict.filter((v) => v.is_bug).map((v) => v.bug_id);
+  const wrong = verdict.filter((v) => !v.is_bug).map((v) => v.bug_id);
+  const key = req.headers["x-fix-bug"];
+  await pool.query(
+    "INSERT INTO free_progress (api_key, found_bugs) VALUES ($1, $2) ON CONFLICT (api_key) DO UPDATE SET found_bugs = EXCLUDED.found_bugs",
+    [key, JSON.stringify(correct)]
+  );
+  res.json({ verdict, found: correct, wrong, total: TRIAL_TOTAL, ...UPSELL });
+});
+
 app.post("/free/v1/api/keys", async (req, res) => {
   try {
     const key = generateApiKey();
