@@ -5,9 +5,9 @@ info:
   description: |
     Free Trial API for testers. Manage users with a simple CRUD interface.
 
-    **Base URL:** `http://85.193.81.51:3001`
+    **Base URL:** `https://api.eddytester.com`
 servers:
-  - url: "http://85.193.81.51:3001"
+  - url: "https://api.eddytester.com"
     description: "Production"
 paths:
   /free/v2/api/users:
