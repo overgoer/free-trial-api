@@ -56,7 +56,7 @@ function validateFreeApiKey(pool) {
     }
 
     const logKey = key === PERMANENT_TEST_KEY ? key : key.substring(0, 20) + "...";
-    console.log(`[API KEY USED] ${logKey} — ${req.method} ${req.originalUrl || req.url} — ${new Date().toISOString()}`);
+    console.log(`[API KEY USED] ${logKey} — ${req.method} ${req.originalUrl || req.url} — ${new Date().toISOString()} (${new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour12: false })} МСК)`);
 
     try {
       const result = await pool.query(
