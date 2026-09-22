@@ -623,7 +623,7 @@ app.listen(PORT, () => {
   console.log("eddytester API v1+v2 running on port " + PORT);
   console.log("  V1 (buggy):  /free/v1/api/");
   console.log("  V2 (fixed):  /free/v2/api/");
-  console.log("  Swagger V1:  http://85.193.81.51:" + PORT + "/docs/v1");
-  console.log("  Swagger V2:  http://85.193.81.51:" + PORT + "/docs/v2");
-  console.log("  Dashboard:   http://77.73.135.110:8082/");
+  console.log("  Swagger V1:  https://api.eddytester.com/docs/v1");
+  console.log("  Swagger V2:  https://api.eddytester.com/docs/v2");
+  console.log("  Dashboard:   https://bridge.eddytester.com");
 });
