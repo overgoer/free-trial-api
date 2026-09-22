@@ -487,6 +487,20 @@ app.delete("/free/v2/api/users/:id", validateFreeApiKey(pool), async (req, res) 
 });
 
 // ===================================================================
+//  SECRET ROUTE — /free/demo/quotes
+//  Намеренно НЕ в свагере и НЕ в доке: демо-секрет для эфиров.
+//  Умные кавычки “ ” → 200, прямые " → 400 (проверка по U+0022).
+// ===================================================================
+app.get("/free/demo/quotes", validateFreeApiKey(pool), rateLimitFree, (req, res) => {
+  const h = req.headers["x-quoted"] || "";
+  if (!h.includes('"')) {
+    res.json({ status: "ok", message: "Легаси доволен: кавычки те самые", ...UPSELL });
+  } else {
+    res.status(400).json({ error: "Invalid header format", ...UPSELL });
+  }
+});
+
+// ===================================================================
 //  SWAGGER UI
 // ===================================================================
 
