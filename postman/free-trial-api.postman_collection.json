@@ -1,0 +1,392 @@
+{
+  "info": {
+    "name": "eddytester Free Trial API — полная коллекция",
+    "description": "Все ручки Free Trial API (api.eddytester.com), включая секретную — /free/demo/quotes (её нет ни в доке, ни в свагере).\n\nКак начать:\n1. Запрос «Выдать ключ» в папке «1. Ключ» — получишь свой ключ на 24 часа\n2. Открой Variables коллекции → вставь ключ в переменную api_key\n3. Гоняй запросы — в V1 спрятаны баги, V2 эталон для сравнения\n\nДока: https://eddytester.com/trial · Свагер: https://api.eddytester.com/docs/v1 и /docs/v2\nПолная версия: 48 багов, 19 уроков → https://eddytester.com",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://api.eddytester.com" },
+    { "key": "api_key", "value": "free-trial-06da3399" },
+    { "key": "email", "value": "you@example.com" }
+  ],
+  "item": [
+    {
+      "name": "1. Ключ",
+      "item": [
+        {
+          "name": "Выдать ключ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/free/api/keys",
+              "host": ["{{base_url}}"],
+              "path": ["free", "api", "keys"]
+            },
+            "description": "Выдаёт бесплатный ключ на 24 часа (без авторизации). Скопируй key из ответа в переменную api_key (Variables коллекции).\n\nИдентичные ручки: POST /free/v1/api/keys и POST /free/v2/api/keys."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Legacy (старые ручки)",
+      "item": [
+        {
+          "name": "POST users (legacy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"age\": 25\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["free", "api", "users"]
+            },
+            "description": "Ранняя версия с багами: пустое имя проходит, age не валидируется (undefined → 500), дубликаты создаются без ошибки, ошибка PostgreSQL утекает клиенту."
+          }
+        },
+        {
+          "name": "GET users (legacy)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/api/users?limit=10&status=candidate",
+              "host": ["{{base_url}}"],
+              "path": ["free", "api", "users"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "candidate" }
+              ]
+            },
+            "description": "Баг: при любом limit возвращается максимум одна запись. Content-Type: text/plain вместо application/json."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. V1 — с багами",
+      "item": [
+        {
+          "name": "POST users",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"age\": 25\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/v1/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v1", "api", "users"]
+            },
+            "description": "Попробуй: age = 17 (принимается), name = \"  Alice  \" (не обрезается), name длиной 200 символов (нет лимита)."
+          }
+        },
+        {
+          "name": "GET users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/v1/api/users?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v1", "api", "users"],
+              "query": [{ "key": "limit", "value": "5" }]
+            },
+            "description": "Баг: limit=5 всё равно отдаёт одну запись. И Content-Type: text/plain."
+          }
+        },
+        {
+          "name": "GET users/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/v1/api/users/2",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v1", "api", "users", "2"]
+            },
+            "description": "Баг: ищет id-1 — /users/2 вернёт пользователя с id=1. А /users/abc или /users/0 роняет сервер с 500."
+          }
+        },
+        {
+          "name": "PATCH users/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob\",\n  \"age\": 31\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/v1/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v1", "api", "users", "1"]
+            },
+            "description": "Баг: пустое имя принимается, а отрицательный age кидает драматичную фейковую ошибку «Database connection lost» (500). Несуществующий id → 200 «User not found»."
+          }
+        },
+        {
+          "name": "DELETE users/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/v1/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v1", "api", "users", "1"]
+            },
+            "description": "⚠ Баг №9: DELETE без WHERE по id — удаляет ВСЕХ твоих пользователей разом, независимо от id. Для демо — самое то."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. V2 — эталон",
+      "item": [
+        {
+          "name": "POST users",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"age\": 25\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/v2/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v2", "api", "users"]
+            },
+            "description": "Эталон: age 18-65 обязателен и целый, имя не пустое и ≤100 символов, обрезается от пробелов."
+          }
+        },
+        {
+          "name": "GET users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/v2/api/users?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v2", "api", "users"],
+              "query": [{ "key": "limit", "value": "5" }]
+            },
+            "description": "Эталон: limit работает как надо (максимум 100), Content-Type: application/json."
+          }
+        },
+        {
+          "name": "GET users/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/v2/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v2", "api", "users", "1"]
+            },
+            "description": "Эталон: корректный id → юзер; abc/0 → 400; несуществующий → 404."
+          }
+        },
+        {
+          "name": "PATCH users/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob\",\n  \"age\": 31\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/v2/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v2", "api", "users", "1"]
+            },
+            "description": "Эталон: валидация как в POST, несуществующий id → 404."
+          }
+        },
+        {
+          "name": "DELETE users/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/v2/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["free", "v2", "api", "users", "1"]
+            },
+            "description": "Эталон: удаляет ровно одного, несуществующий → 404."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Прогресс",
+      "item": [
+        {
+          "name": "GET progress",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Fix-Bug", "value": "{{api_key}}" }],
+            "url": {
+              "raw": "{{base_url}}/free/api/progress",
+              "host": ["{{base_url}}"],
+              "path": ["free", "api", "progress"]
+            },
+            "description": "Какие баги ты уже нашёл (из 7 зачётных на трёх методах)."
+          }
+        },
+        {
+          "name": "POST progress (проверить баги)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"selected\": [\"age17\", \"notrim\"],\n  \"reset_method\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/api/progress",
+              "host": ["{{base_url}}"],
+              "path": ["free", "api", "progress"]
+            },
+            "description": "Вердикт по выбранным багам: bug_id из списка (age17, notrim, nolimit, limit1, content, idminus, crash500). reset_method = \"POST /users\" (или другой метод) — сбрасывает найденное по методу."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Продление",
+      "item": [
+        {
+          "name": "POST extend (продлить за email)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/free/api/extend",
+              "host": ["{{base_url}}"],
+              "path": ["free", "api", "extend"]
+            },
+            "description": "Продлевает триал на +48 часов за email. Работает только с лендинга eddytester.com (проверка Origin) — из Postman может вернуть 403."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Секрет",
+      "item": [
+        {
+          "name": "Секретная ручка: умные кавычки",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "X-Quoted", "value": "“value”" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/free/demo/quotes",
+              "host": ["{{base_url}}"],
+              "path": ["free", "demo", "quotes"]
+            },
+            "description": "🎁 Секретная ручка — её НЕТ ни в доке, ни в свагере. Легаси-бэкенд ждёт умные (типографские) кавычки “ ” в заголовке X-Quoted. С умными → 200 «Легаси доволен»."
+          }
+        },
+        {
+          "name": "Секретная ручка: прямые кавычки",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Fix-Bug", "value": "{{api_key}}" },
+              { "key": "X-Quoted", "value": "\"value\"" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/free/demo/quotes",
+              "host": ["{{base_url}}"],
+              "path": ["free", "demo", "quotes"]
+            },
+            "description": "Прямые кавычки \" \" → 400 «Invalid header format». В интерфейсе Postman оба варианта выглядят одинаково — попробуй повторить через curl -v и посмотри, что реально ушло по проводу."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Служебные",
+      "item": [
+        {
+          "name": "GET ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ping",
+              "host": ["{{base_url}}"],
+              "path": ["ping"]
+            },
+            "description": "Жив ли API."
+          }
+        },
+        {
+          "name": "GET bugs (страница багов)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bugs",
+              "host": ["{{base_url}}"],
+              "path": ["bugs"]
+            },
+            "description": "HTML-страница со списком багов триала."
+          }
+        },
+        {
+          "name": "balance-lab (зеркало запроса)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/balance-lab",
+              "host": ["{{base_url}}"],
+              "path": ["balance-lab"]
+            },
+            "description": "Возвращает твой Host, IP и все заголовки запроса. Принимает любой метод."
+          }
+        }
+      ]
+    }
+  ]
+}
