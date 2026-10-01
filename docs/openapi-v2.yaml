@@ -130,6 +130,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /free/v2/api/users/{id}:
+    get:
+      summary: "Get user by id"
+      description: "Returns a single user by their ID."
+      operationId: "getUserV2"
+      tags: ["Users"]
+      parameters:
+        - name: "X-Fix-Bug"
+          in: "header"
+          required: true
+          schema:
+            type: string
+          description: "Your API key"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: "User ID"
+          example: 1
+      responses:
+        "200":
+          description: "User found"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/UserSummary"
+        "400":
+          description: "Invalid user ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: "Missing or invalid API key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: "Rate limit exceeded"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /ping:
     get:
       summary: "Health check"
